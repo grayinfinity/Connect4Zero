@@ -2,7 +2,7 @@ import numpy as np
 from MCTS_NN import MCTS_NN
 from MCTS import MCTS
 import random
-from ResNet import ResNet_Training, DenseNet_Training
+from ResNet import ResNet_Training
 from Game_bitboard import Game
 import config
 import time
