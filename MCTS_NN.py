@@ -140,6 +140,9 @@ class MCTS_NN:
             game = Game(leaf.state)
             _, winner = game.gameover()
 
+            if winner != 0:
+                winner = 1 if winner == leaf.state[2] else -1
+
             leaf.W += winner
             leaf.N += 1
             leaf.Q = leaf.W / leaf.N
