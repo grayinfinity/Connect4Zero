@@ -1,3 +1,14 @@
+#  ================ AlphaZero algorithm for Connect 4 game =================== #
+# Name:             main_functions.py
+# Description:      Main functions of the program, including self play,
+#                   experience replay, tournaments and elo ratings
+# Authors:          Jean-Philippe Bruneton & Adèle Douin & Vincent Reverdy
+# Date:             2018
+# License:          BSD 3-Clause License
+# ============================================================================ #
+
+# ================================= PREAMBLE ================================= #
+# Packages
 import numpy as np
 from MCTS_NN import MCTS_NN
 from MCTS import MCTS
@@ -17,6 +28,7 @@ import torch
 
 
 # ======================= Useful fonctions for MAIN ========================== #
+
 # --------------------------------------#
 def load_or_create_neural_net():
     if config.net == 'resnet':
@@ -129,7 +141,7 @@ def onevsonegame(player1, budget1, player2, budget2, whostarts, cpuct, tau, tau_
     gameover = 0
     turn = 0
 
-    while not gameover:
+    while gameover == 0:
         turn = turn + 1
 
         if turn % 2 == modulo:
@@ -288,6 +300,7 @@ def onevsonegame(player1, budget1, player2, budget2, whostarts, cpuct, tau, tau_
 
 # ---------------------------------------------------------------------------- #
 # main self play function
+
 def self_play(player, self_play_loop_number, CPUs, sim_number, cpuct, tau, tau_zero, use_dirichlet):
     winp1 = 0
     winp2 = 0
@@ -348,6 +361,7 @@ def self_play(player, self_play_loop_number, CPUs, sim_number, cpuct, tau, tau_z
 
 # ---------------------------------------------------------------------------- #
 # main tournament function between version1 NN and version 2 NN
+
 def play_v1_against_v2(current_player, best_player_so_far,
                        loop_number, CPUs, sim_number, cpuct, tau, tau_zero, use_dirichlet):
     winp1 = 0
@@ -404,6 +418,7 @@ def play_v1_against_v2(current_player, best_player_so_far,
 
 
 # --------------------------------------------------------------------#
+
 def generate_self_play_data(best_player_so_far, sim_number, dataseen, i):
     print('')
     print('--- Generating data with self-play (', (config.selfplaygames // config.CPUS) * config.CPUS, 'games) ---',
@@ -452,8 +467,9 @@ def UCT_simu(node, Cp):
         return node.Q + Cp * np.sqrt(2 * np.log(node.parent.N) / (node.N))
 
 
-# ----------------------------------------------------------------------#
+# -----------------------------------------------------------------------#
 # play *one* game between NN and pure MCTS
+
 def NN_against_mcts(player_NN, budget_NN, budget_MCTS, whostarts, c_uct, cpuct, tau, tau_zero, use_dirichlet, index):
     random.seed()
     np.random.seed()
@@ -576,6 +592,7 @@ def NN_against_mcts(player_NN, budget_NN, budget_MCTS, whostarts, c_uct, cpuct, 
 # ---------------------------------------------------------------------------- #
 # Use this as a checkpoint for later use to compute the elo rating
 # Here we play parallel games of NN against pure MCTS
+
 def winrate_against_mcts(player, sim_number, self_play_loop_number,
                          CPUs, budget_mcts, cpuct, tau, tau_zero, use_dirichlet):
     winp1 = 0
@@ -694,6 +711,7 @@ def geteloratings(elos, best_player_so_far, improved, total_improved):
 # -----------------------------------------------------------------------------------------------------#
 # display the evolution of probabilities for particularly important states (at the beginning of the game)
 # see also readme file
+
 def printstates(player):
     part_states = config.particular_states()
     # knowledge based on http://connect4.gamesolver.org

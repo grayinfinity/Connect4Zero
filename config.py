@@ -1,17 +1,8 @@
-#  ================ AlphaZero algorithm for Connect 4 game =================== #
-# Name:             config.py
-# Description:      Meta-parameters and various options
-# Authors:          Jean-Philippe Bruneton & Adele Douin & Vincent Reverdy
-# Date:             2018
-# License:          BSD 3-Clause License
-# ============================================================================ #
-
-
-# ----------------------------------------------------------------------#
-# board size : actually cant be modified anymore in this bitboard representation
 L = 7
 H = 6
-
+CPUCT = 1
+tau = 1
+tau_zero_self_play = 18
 # ----------------------------------------------------------------------#
 # Enter how many CPUs you want to use.
 CPUS = 40
@@ -20,20 +11,21 @@ max_iterations = 1000  # max number of iteration of self play reinforcement lear
 # ----------------------------------------------------------------------#
 # MCTS parameters
 SIM_NUMBER = 30
-sim_number_defense = 30  # old option : you can help the second player by increasing its sim number (not sure if it works)
-CPUCT = 1
-# Temperature :
-tau = 1
+
 # see readme :
 favorlonggames = True
 long_game_factor = 0.1
 
-# Unlike other github repo I choose the true reward for terminal states and not the NN Q-value (change to True if you want change this):
+# Unlike other github repo I choose the true reward for terminal states and not the NN Q-value
+# (change to True if you want change this):
 use_nn_for_terminal = False
-# This is an (old) option to force the program to take the win when there is one, or counter the lose. It is actually not needed since it is going to learn this anyway
+# This is an (old) option to force the program to take the win when there is one, or counter the lose.
+# It is actually not needed since it is going to learn this anyway
 use_counter_in_mcts_nn = False
-# To navigate in the MCTS tree, it looks reasonnable to mask and renormalize the probabilities given by the neural network when the move is not legal
-# it is actually not required since the NN does learn it by itself (see the probability going to zero at turn 6 for the full central column)
+# To navigate in the MCTS tree, it looks reasonnable to mask and renormalize the probabilities given
+# by the neural network when the move is not legal
+# it is actually not required since the NN does learn it by itself (see the probability going to zero
+# at turn 6 for the full central column)
 maskinmcts = False
 
 # ----------------------------------------------------------------------#
@@ -83,7 +75,6 @@ use_z_last = False
 data_extension = True
 
 # temperatures
-tau_zero_self_play = 18  # play greedily after turn 18
 tau_self_play = 1  # temperature
 
 # ----------------------------------------------------------------------#
@@ -91,10 +82,10 @@ tau_self_play = 1  # temperature
 tournamentloop = 2  # this number * CPUS is the number of game you play to check whether the NN has improved
 threshold = 0.51  # + 1/np.sqrt(12*tournamentloop*CPUS) # This says it must be greater than 0.5 up to 1 standard deviation. This is 0.532 for 80 games
 sim_number_tournaments = 49
-tau_zero_eval_new_nn = 1  # in this tournament we set this parameter to 1 : both player are greedy
+tau_zero_eval_new_nn = 1  # in this tournament we set this parameter to 1 : both neural_net are greedy
 tau_pv = 1  # temperature
 
-alternplayer = True  # if set to False, the new NN player always start (which is a clear bias -> default is True)
+alternplayer = True  # if set to False, the new NN neural_net always start (which is a clear bias -> default is True)
 
 # do we want use self play data from previous iterations? unclear. Both work (False is faster)
 useprevdata = False
