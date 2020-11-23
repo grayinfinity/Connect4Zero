@@ -1,14 +1,3 @@
-#  ================ AlphaZero algorithm for Connect 4 game =================== #
-# Name:             ResNet.py
-# Description:      Includes both a dense and a resnet.
-#                   Almost identical/taken from https://pytorch.org/docs/0.4.0/_modules/torchvision/models/resnet.html
-# Authors:          Jean-Philippe Bruneton & Adele Douin & Vincent Reverdy
-# Date:             2018
-# License:          BSD 3-Clause License
-# ============================================================================ #
-
-# ================================= PREAMBLE ================================= #
-# Packages
 import torch
 import torch.utils
 import torch.nn as nn
@@ -256,6 +245,7 @@ class ResNet_Training:
             total_train_loss = 0
 
             for i, data in enumerate(self.train_loader, 0):
+
                 sboard = config.L * config.H
                 preinputs = data[:, 0:3 * sboard]
                 inputs = preinputs.view(self.batch_size, 3, config.H, config.L)
