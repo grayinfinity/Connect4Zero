@@ -10,13 +10,18 @@ import ResNet
 import torch
 import ray
 
+ray.init()
+
+
 def main():
     firstPlayer = Player(1, False, 600, True)
     secondPlayer = Player(-1, False, 600, True)
+    result_ids = []
+    for i in range(4):
+        result_ids.append(play_game(firstPlayer, secondPlayer).remote(i))
+    print(result_ids)
 
-    print(play_game(firstPlayer, secondPlayer))
-
-
+@ray.remote
 def play_game(player_one, player_two):
     gameover, winner, turn = False, 0, 0
     game = Game()
@@ -24,8 +29,10 @@ def play_game(player_one, player_two):
 
     while not gameover:
         turn += 1
-        move, turn_data = player_one.get_move(game.state, turn) if turn % 2 == 1 else player_two.get_move(game.state,
-                                                                                                          turn)
+        if turn % 2 == 1:
+            move, turn_data = player_one.get_move(game.state, turn)
+        else:
+            move, turn_data = player_two.get_move(game.state, turn)
         new_data_for_the_game = np.vstack((new_data_for_the_game, turn_data))
 
         game.takestep(move)
@@ -96,7 +103,7 @@ def load_or_create_neural_net():
 
 # ---------------------------------------------------------------------------- #
 # Neural Net training
-def improve_model_resnet(player, data, i):
+def improve_model_resnet(nn, data, i):
     # here i is the number of times NN has improved : it will be used for learning rate annealing
 
     min_data = config.MINIBATCH * config.MINBATCHNUMBER
@@ -126,7 +133,7 @@ def improve_model_resnet(player, data, i):
             print('learning rate is now = ', lr_decay)
 
         if config.net == 'resnet':
-            training = ResNet_Training(player, config.MINIBATCH, config.EPOCHS, lr_decay, X, X, 1)
+            training = ResNet_Training(nn, config.MINIBATCH, config.EPOCHS, lr_decay, X, X, 1)
             training.trainNet()
 
     else:

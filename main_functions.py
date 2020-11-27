@@ -180,7 +180,7 @@ def onevsonegame(player1, budget1, player2, budget2, whostarts, cpuct, tau, tau_
         unmask_pi[child_col] = probvisit
         flatten_state = game.state_flattener(currentnode.state)
 
-        # init z to zero ; z is the actual reward from the current's player point of view, see below
+        # init z to zero ; z is the actual reward from the current's nn point of view, see below
         this_turn_data = np.hstack((flatten_state, unmask_pi, 0))
         new_data_for_the_game = np.vstack((new_data_for_the_game, this_turn_data))
 
@@ -218,13 +218,13 @@ def onevsonegame(player1, budget1, player2, budget2, whostarts, cpuct, tau, tau_
         new_data_for_the_game = np.vstack((new_data_for_the_game, this_turn_data))
 
     # update the z's and winner stats
-    wp1 = 0  # win player 1, etc
+    wp1 = 0  # win nn 1, etc
     wp2 = 0
     winstart = 0
     winsecond = 0
     draw = 0
 
-    # backfill the z such as it becomes the actual reward from the current's player point of view:
+    # backfill the z such as it becomes the actual reward from the current's nn point of view:
     history_size = new_data_for_the_game.shape[0]
 
     if winner == 0:
@@ -374,7 +374,7 @@ def play_v1_against_v2(current_player, best_player_so_far,
 
         procs = []
 
-        # if alternplayer is true, player 1 starts half of the games, and player 2 the other half
+        # if alternplayer is true, nn 1 starts half of the games, and nn 2 the other half
         for index in range(CPUs):
             if index % 2 == 0:
                 whostarts = 'player1'
@@ -384,7 +384,7 @@ def play_v1_against_v2(current_player, best_player_so_far,
                 else:
                     whostarts = 'player1'
 
-            # here player 1 is the improved NN, player 2 the old NN
+            # here nn 1 is the improved NN, nn 2 the old NN
             proc = Process(target=onevsonegame,
                            args=(current_player, sim_number, best_player_so_far, sim_number,
                                  whostarts, cpuct, tau, tau_zero, use_dirichlet, index,))
@@ -432,7 +432,7 @@ def generate_self_play_data(best_player_so_far, sim_number, dataseen, i):
                       sim_number, config.CPUCT, config.tau_self_play,
                       config.tau_zero_self_play, config.dirichlet_for_self_play)
         time.sleep(0.01)
-        print('FYI, win ratio of first player was', int(ratio * 1000) / 10, '%')
+        print('FYI, win ratio of first nn was', int(ratio * 1000) / 10, '%')
         time.sleep(0.01)
 
         prev_data_seen = np.copy(dataseen)
@@ -452,7 +452,7 @@ def generate_self_play_data(best_player_so_far, sim_number, dataseen, i):
         prev_data_seen = np.copy(dataseen)
 
         time.sleep(0.01)
-        print('FYI, win ratio of first player was', int(ratio * 1000) / 10, '%')
+        print('FYI, win ratio of first nn was', int(ratio * 1000) / 10, '%')
         time.sleep(0.01)
 
     return use_this_data, prev_data_seen
@@ -529,7 +529,7 @@ def NN_against_mcts(player_NN, budget_NN, budget_MCTS, whostarts, c_uct, cpuct, 
                 max = np.random.choice(np.where(all_visits == np.max(all_visits))[0])
                 currentnode = currentnode.children[max]
 
-            # reinit tree for next player : mcts
+            # reinit tree for next nn : mcts
             game = Game(currentnode.state)
             tree = MCTS()
             rootnode = tree.createNode(game.state)
@@ -549,7 +549,7 @@ def NN_against_mcts(player_NN, budget_NN, budget_MCTS, whostarts, c_uct, cpuct, 
             imax = np.random.choice(np.where(values == np.max(values))[0])
             currentnode = currentnode.children[imax]
 
-            # reinit tree for next player : neural net
+            # reinit tree for next nn : neural net
             game = Game(currentnode.state)
             tree = MCTS_NN(player_NN, use_dirichlet)
             rootnode = tree.createNode(game.state)
@@ -668,9 +668,9 @@ def geteloratings(elos, best_player_so_far, improved, total_improved):
         budget_mcts = 3200
         baserating = 1495
 
-    use_dirichlet = False  # greedy NN player
+    use_dirichlet = False  # greedy NN nn
     tau_agg = 1
-    tau_zero = 1  # greedy NN player
+    tau_zero = 1  # greedy NN nn
     loop_number_mcts = 2  # meaning we play 2*cpus games
     sim_number_a_mcts = 49  # sim number allowed for the trained neural net
 
@@ -688,7 +688,7 @@ def geteloratings(elos, best_player_so_far, improved, total_improved):
         print('NN wins by', 100 * winp1 / (winp1 + winp2 + draws), 'draw', 100 * draws / (winp1 + winp2 + draws),
               'lost', 100 * winp2 / (winp1 + winp2 + draws))
         time.sleep(0.01)
-        print('when NN wins, it wins', 100 * ratio_starter, '% of the won games as first player')
+        print('when NN wins, it wins', 100 * ratio_starter, '% of the won games as first nn')
 
         # in case there is a 0% or 100% win - decide its +-800 points in Elo
         # doesnt happen often with the increasing mcts budget
