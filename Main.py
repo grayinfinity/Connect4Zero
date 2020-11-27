@@ -20,7 +20,8 @@ def main():
     result_ids = []
     for i in range(4):
         result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
-    print(result_ids)
+    for result in result_ids:
+        print(result)
 
 @ray.remote
 def play_game(player_one, player_two):
