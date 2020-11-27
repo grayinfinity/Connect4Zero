@@ -9,6 +9,7 @@ import os
 import ResNet
 import torch
 import ray
+import copy
 
 ray.init()
 
@@ -18,7 +19,7 @@ def main():
     secondPlayer = Player(-1, False, 600, True)
     result_ids = []
     for i in range(4):
-        result_ids.append(play_game(firstPlayer, secondPlayer).remote(i))
+        result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
     print(result_ids)
 
 @ray.remote
