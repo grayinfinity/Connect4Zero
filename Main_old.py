@@ -99,7 +99,7 @@ def launch():
             (best_player_so_far, previous_best, config.tournamentloop, config.CPUS, config.sim_number_tournaments, config.CPUCT,
              config.tau_pv, config.tau_zero_eval_new_nn, use_dirichlet)
         time.sleep(0.01)
-        #print('FYI, first player won by', int(1000*ratio)/10, '%' )
+        #print('FYI, first nn won by', int(1000*ratio)/10, '%' )
 
 
         # Model has improved, then save model, save data:
