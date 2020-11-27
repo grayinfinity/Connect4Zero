@@ -17,11 +17,14 @@ ray.init()
 def main():
     firstPlayer = Player(1, False, 600, True)
     secondPlayer = Player(-1, False, 600, True)
-    result_ids = []
+    winners = []
+    all_data = []
     for i in range(4):
-        result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
-    for result in result_ids:
-        print(result)
+        winner, data = play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer))
+        winners.append(winner)
+        all_data.append(data)
+
+    print(winners)
 
 @ray.remote
 def play_game(player_one, player_two):
