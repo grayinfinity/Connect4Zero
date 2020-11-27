@@ -18,7 +18,7 @@ def main():
     firstPlayer = Player(1, False, 600, True)
     secondPlayer = Player(-1, False, 600, True)
     result_ids = []
-    for i in range(4):
+    for i in range(96):
         result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
 
     winners = []
