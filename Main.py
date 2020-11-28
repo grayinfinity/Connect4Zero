@@ -15,11 +15,65 @@ ray.init()
 
 
 def main():
-    firstPlayer = Player(1, False, 600, True)
-    secondPlayer = Player(-1, False, 600, True)
+    nn_budget = 600
+    improved = 0
+    best_nn = ResNet.resnet18()
+    elos = []
+
+    for i in range(10):
+        data = self_play(best_nn, nn_budget)
+        previous_best = copy.deepcopy(best_nn)
+        improve_model_resnet(best_nn, data, improved)
+        winrate = test_player(Player(best_nn, nn_budget, True), Player(previous_best, nn_budget, True), 50)
+        if winrate < 0.55:
+            best_nn = previous_best
+        else:
+            improved += 1
+            elos.append(check_elo(best_nn, 600))
+
+    print(elos)
+
+
+def test_player(main_player, compare_player, loops):
+    games_count = config.CPUS * loops
     result_ids = []
-    for i in range(2):
-        result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
+    main_player_wins = 0
+    for i in range(loops):
+        for _ in range(config.CPUS):
+            if i < loops // 2:  # check if making a copy is enough
+                result_ids.append([play_game.remote(copy.deepcopy(main_player), copy.deepcopy(compare_player)), 1])
+            else:
+                result_ids.append([play_game.remote(copy.deepcopy(compare_player), copy.deepcopy(main_player)), -1])
+
+    for result_id, player_number in result_ids:
+        winner, data = ray.get(result_id)
+        if winner == player_number:
+            main_player_wins += 1
+
+    return main_player_wins / games_count
+
+
+def check_elo(nn, budget):
+    nn_player = Player(nn, budget, True)
+    mcts_budget = 100
+    for _ in range(50):
+        mcts_player = Player(False, mcts_budget)
+        winrate = test_player(nn_player, mcts_player, True)
+        if winrate > 50:
+            mcts_budget += 100
+        else:
+            mcts_budget = max(50, mcts_budget - 100)
+
+    print(mcts_budget)
+    return mcts_budget
+
+
+def self_play(nn, budget):
+    first_player = Player(nn, budget, True)
+    second_player = Player(nn, budget, True)
+    result_ids = []
+    for i in range(config.CPUS):
+        result_ids.append(play_game.remote(copy.deepcopy(first_player), copy.deepcopy(second_player)))
 
     winners = []
     all_data = []
@@ -31,6 +85,7 @@ def main():
         else:
             np.vstack((all_data, data))
 
+    return all_data
 
 
 @ray.remote
@@ -45,27 +100,30 @@ def play_game(player_one, player_two):
             move, turn_data = player_one.get_move(game.state, turn)
         else:
             move, turn_data = player_two.get_move(game.state, turn)
-        new_data_for_the_game = np.vstack((new_data_for_the_game, turn_data))
+
+        if player_one.selfplay:
+            new_data_for_the_game = np.vstack((new_data_for_the_game, turn_data))
 
         game.takestep(move)
         gameover, winner = game.gameover()
 
-    new_data_for_the_game = np.delete(new_data_for_the_game, 0, 0)
-    history_size = new_data_for_the_game.shape[0]
+    if player_one.selfplay:
+        new_data_for_the_game = np.delete(new_data_for_the_game, 0, 0)
+        history_size = new_data_for_the_game.shape[0]
 
-    z = 0
-    if winner == 1:
-        z = 1 - config.long_game_factor * history_size / 42  # the reward is bigger for shorter games
-    elif winner == -1:
-        z = -1 + config.long_game_factor * history_size / 42  # the reward is less negative for long games
+        z = 0
+        if winner == 1:
+            z = 1 - config.long_game_factor * history_size / 42  # the reward is bigger for shorter games
+        elif winner == -1:
+            z = -1 + config.long_game_factor * history_size / 42  # the reward is less negative for long games
 
-    z_vec = np.zeros(history_size)
+        z_vec = np.zeros(history_size)
 
-    for i in range(history_size):
-        z_vec[i] = ((-1) ** i) * z
+        for i in range(history_size):
+            z_vec[i] = ((-1) ** i) * z
 
-    new_data_for_the_game[:, -1] = z_vec
-    new_data_for_the_game = extend_data(new_data_for_the_game)
+        new_data_for_the_game[:, -1] = z_vec
+        new_data_for_the_game = extend_data(new_data_for_the_game)
 
     return winner, new_data_for_the_game
 

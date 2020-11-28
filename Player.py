@@ -5,8 +5,7 @@ from Game import Game
 
 
 class Player:
-    def __init__(self, number, nn, budget, selfplay=False):
-        self.number = number
+    def __init__(self, nn, budget, selfplay=False):
         self.nn = nn
         self.uct = config.CPUCT
         self.budget = budget
@@ -14,6 +13,7 @@ class Player:
         self.tree = MCTS("nn", nn, self.selfplay) if nn else MCTS("Random")
         self.current_node = None
         self.game = Game()
+        self.nn.eval()
 
     def update_current_node(self, state):
         if self.current_node is None:

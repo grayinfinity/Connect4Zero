@@ -5,7 +5,7 @@ tau = 1
 tau_zero_self_play = 18
 # ----------------------------------------------------------------------#
 # Enter how many CPUs you want to use.
-CPUS = 40
+CPUS = 2
 max_iterations = 1000  # max number of iteration of self play reinforcement learning
 
 # ----------------------------------------------------------------------#
