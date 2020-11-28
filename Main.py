@@ -19,9 +19,14 @@ def main():
     improved = 0
     best_nn = ResNet.resnet18()
     elos = []
+    data = []
 
     for i in range(10):
-        data = self_play(best_nn, nn_budget)
+        new_data = self_play(best_nn, nn_budget)
+        if len(data) == 0:
+            data = new_data
+        else:
+            data = np.vstack((data, new_data))
         previous_best = copy.deepcopy(best_nn)
         improve_model_resnet(best_nn, data, improved)
         winrate = test_player(Player(best_nn, nn_budget, True), Player(previous_best, nn_budget, True), 50)
@@ -58,7 +63,7 @@ def check_elo(nn, budget):
     mcts_budget = 100
     for _ in range(50):
         mcts_player = Player(False, mcts_budget)
-        winrate = test_player(nn_player, mcts_player, True)
+        winrate = test_player(nn_player, mcts_player, 2)
         if winrate > 50:
             mcts_budget += 100
         else:
@@ -72,7 +77,7 @@ def self_play(nn, budget):
     first_player = Player(nn, budget, True)
     second_player = Player(nn, budget, True)
     result_ids = []
-    for i in range(config.CPUS):
+    for i in range(config.CPUS * 10):
         result_ids.append(play_game.remote(copy.deepcopy(first_player), copy.deepcopy(second_player)))
 
     winners = []
