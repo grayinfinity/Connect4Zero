@@ -18,7 +18,7 @@ def main():
     firstPlayer = Player(1, False, 600, True)
     secondPlayer = Player(-1, False, 600, True)
     result_ids = []
-    for i in range(96):
+    for i in range(2):
         result_ids.append(play_game.remote(copy.deepcopy(firstPlayer), copy.deepcopy(secondPlayer)))
 
     winners = []
@@ -26,9 +26,11 @@ def main():
     for result_id in result_ids:
         winner, data = ray.get(result_id)
         winners.append(winner)
-        all_data.append(data)
+        if len(all_data) == 0:
+            all_data = data
+        else:
+            np.vstack((all_data, data))
 
-    print(winners)
 
 
 @ray.remote
