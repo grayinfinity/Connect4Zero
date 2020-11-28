@@ -10,6 +10,7 @@ import ResNet
 import torch
 import ray
 import copy
+from tqdm import tqdm
 
 ray.init()
 
@@ -27,6 +28,8 @@ def main():
             data = new_data
         else:
             data = np.vstack((data, new_data))
+
+        print(data.shape)
         previous_best = copy.deepcopy(best_nn)
         improve_model_resnet(best_nn, data, improved)
         winrate = test_player(Player(best_nn, nn_budget, True), Player(previous_best, nn_budget, True), 50)
@@ -77,8 +80,9 @@ def self_play(nn, budget):
     first_player = Player(nn, budget, True)
     second_player = Player(nn, budget, True)
     result_ids = []
-    for i in range(config.CPUS * 10):
-        result_ids.append(play_game.remote(copy.deepcopy(first_player), copy.deepcopy(second_player)))
+    for _ in tqdm(range(10)):
+        for i in range(config.CPUS):
+            result_ids.append(play_game.remote(copy.deepcopy(first_player), copy.deepcopy(second_player)))
 
     winners = []
     all_data = []
