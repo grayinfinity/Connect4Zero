@@ -22,17 +22,19 @@ def main():
     elos = []
     data = []
 
-    for i in range(10):
+    for i in range(5):
         new_data = self_play(best_nn, nn_budget)
         if len(data) == 0:
             data = new_data
         else:
             data = np.vstack((data, new_data))
 
-        print(data.shape)
         previous_best = copy.deepcopy(best_nn)
         improve_model_resnet(best_nn, data, improved)
-        winrate = test_player(Player(best_nn, nn_budget, True), Player(previous_best, nn_budget, True), 50)
+
+        print('Compering the new NN vs the old one')
+        winrate = test_player(best_nn, nn_budget, previous_best, nn_budget, 2)
+
         if winrate < 0.55:
             best_nn = previous_best
         else:
@@ -42,31 +44,40 @@ def main():
     print(elos)
 
 
-def test_player(main_player, compare_player, loops):
+def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_player_budget, loops):
     games_count = config.CPUS * loops
-    result_ids = []
+
     main_player_wins = 0
-    for i in range(loops):
+    main_player_nn_id = ray.put(main_player_nn)
+    compare_player_nn_id = ray.put(compare_player_nn)
+    for i in tqdm(range(loops)):
+        result_ids = []
         for _ in range(config.CPUS):
             if i < loops // 2:  # check if making a copy is enough
-                result_ids.append([play_game.remote(copy.deepcopy(main_player), copy.deepcopy(compare_player)), 1])
+                result_ids.append([play_game.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
+                                                    compare_player_budget), 1])
             else:
-                result_ids.append([play_game.remote(copy.deepcopy(compare_player), copy.deepcopy(main_player)), -1])
+                result_ids.append([play_game.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
+                                                    main_player_budget), -1])
 
-    for result_id, player_number in result_ids:
-        winner, data = ray.get(result_id)
-        if winner == player_number:
-            main_player_wins += 1
+        for result_id, player_number in result_ids:
+            winner, data = ray.get(result_id)
+            if winner == player_number:
+                main_player_wins += 1
 
-    return main_player_wins / games_count
+    del main_player_nn_id
+    del compare_player_nn_id
+
+    winrate = main_player_wins / games_count
+    print("Winrate: " + str(winrate))
+    return winrate
 
 
 def check_elo(nn, budget):
-    nn_player = Player(nn, budget, True)
     mcts_budget = 100
-    for _ in range(50):
-        mcts_player = Player(False, mcts_budget)
-        winrate = test_player(nn_player, mcts_player, 2)
+    print('Playing vs MCTS')
+    for _ in tqdm(range(50)):
+        winrate = test_player(nn, budget, False, mcts_budget, 2)
         if winrate > 50:
             mcts_budget += 100
         else:
@@ -77,28 +88,32 @@ def check_elo(nn, budget):
 
 
 def self_play(nn, budget):
-    first_player = Player(nn, budget, True)
-    second_player = Player(nn, budget, True)
-    result_ids = []
-    for _ in tqdm(range(10)):
-        for i in range(config.CPUS):
-            result_ids.append(play_game.remote(copy.deepcopy(first_player), copy.deepcopy(second_player)))
+    print('Self playing')
 
     winners = []
     all_data = []
-    for result_id in result_ids:
-        winner, data = ray.get(result_id)
-        winners.append(winner)
-        if len(all_data) == 0:
-            all_data = data
-        else:
-            np.vstack((all_data, data))
+    nn_id = ray.put(nn)
+    for _ in tqdm(range(2)):
+        result_ids = []
+        for i in range(config.CPUS):
+            result_ids.append(play_game.remote(nn_id, budget, nn_id, budget))
+
+        for result_id in result_ids:
+            winner, data = ray.get(result_id)
+            winners.append(winner)
+            if len(all_data) == 0:
+                all_data = data
+            else:
+                all_data = np.vstack((all_data, data))
+    del nn_id
 
     return all_data
 
 
 @ray.remote
-def play_game(player_one, player_two):
+def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget):
+    player_one = Player(player_one_nn, player_one_budget, True)
+    player_two = Player(player_two_nn, player_two_budget, True)
     gameover, winner, turn = False, 0, 0
     game = Game()
     new_data_for_the_game = np.zeros((3 * config.L * config.H + config.L + 1))
