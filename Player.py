@@ -10,7 +10,7 @@ class Player:
         self.uct = config.CPUCT
         self.budget = budget
         self.selfplay = selfplay
-        self.tree = MCTS("nn", nn, self.selfplay) if nn else MCTS("Random")
+        self.tree = MCTS("NN", nn, self.selfplay) if nn else MCTS("Random")
         self.current_node = None
         self.game = Game()
         self.nn.eval()

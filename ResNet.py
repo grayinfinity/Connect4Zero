@@ -287,5 +287,5 @@ class ResNet_Training:
                     running_loss = 0.0
                     start_time = time.time()
 
-        # send back the model to cpu for next self play games using forward in parallel cpu
         self.net.cpu()
+        self.net.eval()

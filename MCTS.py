@@ -73,9 +73,6 @@ class MCTS:
 
     # ---------------------------------------------------------------------------- #
     def eval_leaf(self, leaf):
-
-        self.neural_net.eval()
-        np.random.seed()
         game = Game(leaf.state)
         if not leaf.isterminal():
             flat = game.state_flattener(leaf.state)

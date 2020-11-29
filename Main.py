@@ -226,9 +226,9 @@ def improve_model_resnet(nn, data, i):
         if j == k + 1:
             print('learning rate is now = ', lr_decay)
 
-        if config.net == 'resnet':
-            training = ResNet_Training(nn, config.MINIBATCH, config.EPOCHS, lr_decay, X, X, 1)
-            training.trainNet()
+
+        training = ResNet_Training(nn, config.MINIBATCH, config.EPOCHS, lr_decay, X, X, 1)
+        training.trainNet()
 
     else:
         print('Not enough training data. Please increase number of self play games or use previous data = True')
