@@ -172,6 +172,7 @@ class ResNet(nn.Module):
 # builds the model
 def resnet18(pretrained=False, model_root=None, **kwargs):
     model = ResNet(BasicBlock, [config.res_tower, 2, 2, 2], **kwargs)
+    model.eval()
     return model
 
 

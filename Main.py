@@ -55,10 +55,10 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
         for _ in range(config.CPUS):
             if i < loops // 2:  # check if making a copy is enough
                 result_ids.append([play_game.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
-                                                    compare_player_budget), 1])
+                                                    compare_player_budget, False), 1])
             else:
                 result_ids.append([play_game.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
-                                                    main_player_budget), -1])
+                                                    main_player_budget, False), -1])
 
         for result_id, player_number in result_ids:
             winner, data = ray.get(result_id)
@@ -96,7 +96,7 @@ def self_play(nn, budget):
     for _ in tqdm(range(2)):
         result_ids = []
         for i in range(config.CPUS):
-            result_ids.append(play_game.remote(nn_id, budget, nn_id, budget))
+            result_ids.append(play_game.remote(nn_id, budget, nn_id, budget, True))
 
         for result_id in result_ids:
             winner, data = ray.get(result_id)
@@ -111,9 +111,9 @@ def self_play(nn, budget):
 
 
 @ray.remote
-def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget):
-    player_one = Player(player_one_nn, player_one_budget, True)
-    player_two = Player(player_two_nn, player_two_budget, True)
+def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
+    player_one = Player(player_one_nn, player_one_budget, is_selfplay)
+    player_two = Player(player_two_nn, player_two_budget, is_selfplay)
     gameover, winner, turn = False, 0, 0
     game = Game()
     new_data_for_the_game = np.zeros((3 * config.L * config.H + config.L + 1))
@@ -125,7 +125,7 @@ def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget
         else:
             move, turn_data = player_two.get_move(game.state, turn)
 
-        if player_one.selfplay:
+        if is_selfplay:
             new_data_for_the_game = np.vstack((new_data_for_the_game, turn_data))
 
         game.takestep(move)
@@ -225,7 +225,6 @@ def improve_model_resnet(nn, data, i):
         k = (i - 1) // config.annealing
         if j == k + 1:
             print('learning rate is now = ', lr_decay)
-
 
         training = ResNet_Training(nn, config.MINIBATCH, config.EPOCHS, lr_decay, X, X, 1)
         training.trainNet()
