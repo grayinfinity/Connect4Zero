@@ -34,12 +34,6 @@ class Player:
 
         visit_probability = visits / np.sum(visits)
 
-        if self.selfplay and turn < config.tau_zero_self_play:
-            self.current_node = np.random.choice(self.current_node.children, p=visit_probability)
-        else:
-            max_visits = np.random.choice(np.where(visits == np.max(visits))[0])
-            self.current_node = self.current_node.children[max_visits]
-
         if self.selfplay:
             child_col = np.asarray([self.game.convert_move_to_col_index(move) for move in childmoves], dtype=int)
             unmask_pi = np.zeros(config.L)
@@ -48,5 +42,11 @@ class Player:
             turn_data = np.hstack((flatten_state, unmask_pi, 0))
         else:
             turn_data = []
+
+        if self.selfplay and turn < config.tau_zero_self_play:
+            self.current_node = np.random.choice(self.current_node.children, p=visit_probability)
+        else:
+            max_visits = np.random.choice(np.where(visits == np.max(visits))[0])
+            self.current_node = self.current_node.children[max_visits]
 
         return self.current_node.move, turn_data
