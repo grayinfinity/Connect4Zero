@@ -12,34 +12,40 @@ import ray
 import copy
 from tqdm import tqdm
 
-ray.init()
+ray.init(num_gpus=4)
 
 
 def main():
-    nn_budget = 600
+    nn_budget = 30
     improved = 0
     best_nn = ResNet.resnet18()
+    best_nn.to(torch.device("cuda"))
     elos = []
     data = []
 
-    for i in range(5):
+    for i in range(100):
         new_data = self_play(best_nn, nn_budget)
-        if len(data) == 0:
-            data = new_data
+        tmp_data = copy.copy(data)
+        if len(tmp_data) == 0:
+            tmp_data = new_data
         else:
-            data = np.vstack((data, new_data))
+            tmp_data = np.vstack((tmp_data, new_data))
 
         previous_best = copy.deepcopy(best_nn)
-        improve_model_resnet(best_nn, data, improved)
+        improve_model_resnet(best_nn, tmp_data, improved)
 
         print('Compering the new NN vs the old one')
-        winrate = test_player(best_nn, nn_budget, previous_best, nn_budget, 2)
+        winrate = test_player(best_nn, nn_budget, previous_best, nn_budget, 10)
 
         if winrate < 0.55:
             best_nn = previous_best
         else:
+            if len(data) == 0:
+                data = new_data
+            else:
+                data = np.vstack((data, new_data))
             improved += 1
-            elos.append(check_elo(best_nn, 600))
+            elos.append(check_elo(best_nn, nn_budget))
 
     print(elos)
 
@@ -74,14 +80,16 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
 
 
 def check_elo(nn, budget):
-    mcts_budget = 100
+    mcts_budget = 30
     print('Playing vs MCTS')
-    for _ in tqdm(range(50)):
+    for _ in range(20):
         winrate = test_player(nn, budget, False, mcts_budget, 2)
-        if winrate > 50:
-            mcts_budget += 100
+        if winrate > 0.5:
+            mcts_budget += 10
         else:
-            mcts_budget = max(50, mcts_budget - 100)
+            mcts_budget = max(0, mcts_budget - 10)
+            if mcts_budget == 0:
+                break
 
     print(mcts_budget)
     return mcts_budget
@@ -93,7 +101,7 @@ def self_play(nn, budget):
     winners = []
     all_data = []
     nn_id = ray.put(nn)
-    for _ in tqdm(range(2)):
+    for _ in tqdm(range(45)):
         result_ids = []
         for i in range(config.CPUS):
             result_ids.append(play_game.remote(nn_id, budget, nn_id, budget, True))
@@ -110,7 +118,7 @@ def self_play(nn, budget):
     return all_data
 
 
-@ray.remote
+@ray.remote(num_gpus=0.2)
 def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
     player_one = Player(player_one_nn, player_one_budget, is_selfplay)
     player_two = Player(player_two_nn, player_two_budget, is_selfplay)

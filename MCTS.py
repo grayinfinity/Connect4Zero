@@ -76,9 +76,10 @@ class MCTS:
         game = Game(leaf.state)
         if not leaf.isterminal():
             flat = game.state_flattener(leaf.state)
+
             reward, P = self.neural_net.forward(flat)
-            proba_children = P.detach().numpy()[0]
-            NN_q_value = reward.detach().numpy()[0][0]
+            proba_children = P.detach().cpu().numpy()[0]
+            NN_q_value = reward.detach().cpu().numpy()[0][0]
 
             if self.use_dirichlet and leaf.parent is None:
                 probs = np.copy(proba_children)

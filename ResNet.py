@@ -139,6 +139,7 @@ class ResNet(nn.Module):
             x = torch.FloatTensor(x)
             x = torch.unsqueeze(x, 0)
 
+        x = x.cuda()
         x = self.group1(x)
         x = self.layer1(x)
 
@@ -186,18 +187,19 @@ class ResNet_Training:
         self.n_epochs = n_epoch
         self.learning_rate = learning_rate
         self.num_worker = num_worker
-        torch.set_num_threads(1)
+        #  torch.set_num_threads(1)
 
         if config.use_cuda:
             self.net = self.net.cuda()
 
         self.train_set = train_set
-        self.test_set = test_set
+        # self.test_set = test_set
 
         self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True
                                                         , num_workers=self.num_worker, drop_last=True)
-        self.test_loader = torch.utils.data.DataLoader(self.test_set, batch_size=64, shuffle=True
-                                                       , num_workers=self.num_worker)
+
+        # self.test_loader = torch.utils.data.DataLoader(self.test_set, batch_size=64, shuffle=True
+        #                                              , num_workers=self.num_worker)
         self.valid_loader = torch.utils.data.DataLoader(self.train_set, batch_size=128, shuffle=True
                                                         , num_workers=self.num_worker)
         self.net.train()
@@ -288,5 +290,5 @@ class ResNet_Training:
                     running_loss = 0.0
                     start_time = time.time()
 
-        self.net.cpu()
+        #  self.net.cpu()
         self.net.eval()

@@ -10,15 +10,18 @@ class Player:
         self.uct = config.CPUCT
         self.budget = budget
         self.selfplay = selfplay
-        self.tree = MCTS("NN", nn, self.selfplay) if nn else MCTS("Random")
+        self.tree = MCTS("NN", nn) if nn else MCTS("Random")
         self.current_node = None
         self.game = Game()
-        self.nn.eval()
+        if self.nn:
+            self.nn.eval()
 
     def update_current_node(self, state):
         if self.current_node is None:
             self.current_node = self.tree.createNode(state)
         else:
+            if len(self.current_node.children) == 0:
+                self.tree.expand_all(self.current_node)
             self.current_node = next((node for node in self.current_node.children if node.state == state), None)
 
     def get_move(self, state, turn):

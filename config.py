@@ -5,7 +5,7 @@ tau = 1
 tau_zero_self_play = 18
 # ----------------------------------------------------------------------#
 # Enter how many CPUs you want to use.
-CPUS = 96
+CPUS = 20
 max_iterations = 1000  # max number of iteration of self play reinforcement learning
 
 # ----------------------------------------------------------------------#
@@ -57,7 +57,7 @@ annealing = 30
 use_cuda = True  # if you have a GPU
 momentum = 0.9
 wdecay = 0.0001  # weight decay
-EPOCHS = 4
+EPOCHS = 15
 MINIBATCH = 32
 MAXMEMORY = MINIBATCH * 3000  # one iteration of 400 games typically creates 600-1000 batches : here we thus save the last 10-6 games or so
 MAXBATCHNUMBER = 1000  # and we improve the NN by sample randomly in the last maxmemory batches
