@@ -24,20 +24,20 @@ def main():
     data = []
 
     for i in range(100):
-        new_data = self_play(best_nn, nn_budget)
-        tmp_data = copy.copy(data)
-        if len(tmp_data) == 0:
-            tmp_data = new_data
+        new_data = self_play(False, 800)
+
+        if len(data) == 0:
+            data = new_data
         else:
-            tmp_data = np.vstack((tmp_data, new_data))
+            data = np.vstack((data, new_data))
 
         previous_best = copy.deepcopy(best_nn)
-        improve_model_resnet(best_nn, tmp_data, improved)
+        improve_model_resnet(best_nn, data, improved)
 
         print('Compering the new NN vs the old one')
         winrate = test_player(best_nn, nn_budget, previous_best, nn_budget, 10)
-
-        if winrate < 0.55:
+        print("Winrate: " + str(winrate))
+        if winrate < 0.52:
             best_nn = previous_best
         else:
             if len(data) == 0:
@@ -56,15 +56,17 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
     main_player_wins = 0
     main_player_nn_id = ray.put(main_player_nn)
     compare_player_nn_id = ray.put(compare_player_nn)
-    for i in tqdm(range(loops)):
+    for i in range(loops):
         result_ids = []
         for _ in range(config.CPUS):
             if i < loops // 2:  # check if making a copy is enough
-                result_ids.append([play_game.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
-                                                    compare_player_budget, False), 1])
+                result_ids.append(
+                    [play_game_with_gpu.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
+                                               compare_player_budget, False), 1])
             else:
-                result_ids.append([play_game.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
-                                                    main_player_budget, False), -1])
+                result_ids.append(
+                    [play_game_with_gpu.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
+                                               main_player_budget, False), -1])
 
         for result_id, player_number in result_ids:
             winner, data = ray.get(result_id)
@@ -75,7 +77,7 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
     del compare_player_nn_id
 
     winrate = main_player_wins / games_count
-    print("Winrate: " + str(winrate))
+
     return winrate
 
 
@@ -91,20 +93,23 @@ def check_elo(nn, budget):
             if mcts_budget == 0:
                 break
 
-    print(mcts_budget)
+    print("Elo: " + str(mcts_budget))
     return mcts_budget
 
 
 def self_play(nn, budget):
     print('Self playing')
 
+    cpus = config.CPUS
+    if not nn:
+        cpus = 96
     winners = []
     all_data = []
     nn_id = ray.put(nn)
-    for _ in tqdm(range(45)):
+    for _ in tqdm(range(30)):
         result_ids = []
-        for i in range(config.CPUS):
-            result_ids.append(play_game.remote(nn_id, budget, nn_id, budget, True))
+        for i in range(cpus):
+            result_ids.append(play_game_no_gpu.remote(nn_id, budget, nn_id, budget, True))
 
         for result_id in result_ids:
             winner, data = ray.get(result_id)
@@ -119,6 +124,15 @@ def self_play(nn, budget):
 
 
 @ray.remote(num_gpus=0.2)
+def play_game_with_gpu(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
+    return play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay)
+
+
+@ray.remote
+def play_game_no_gpu(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
+    return play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay)
+
+
 def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
     player_one = Player(player_one_nn, player_one_budget, is_selfplay)
     player_two = Player(player_two_nn, player_two_budget, is_selfplay)
@@ -139,7 +153,7 @@ def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget
         game.takestep(move)
         gameover, winner = game.gameover()
 
-    if player_one.selfplay:
+    if is_selfplay:
         new_data_for_the_game = np.delete(new_data_for_the_game, 0, 0)
         history_size = new_data_for_the_game.shape[0]
 

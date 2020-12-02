@@ -48,14 +48,14 @@ class MCTS:
         if node.N == 0:
             return 1000
         else:
-            return node.Q + c_uct * np.sqrt(2 * np.log(node.parent.N) / (node.N))
+            return node.Q + c_uct * np.sqrt(2 * np.log(node.parent.N) / node.N)
 
     # ---------------------------------------------------------------------------- #
     def selection(self, node, c_uct):
-        evaluator = self.PUCT if self.type == 'NN' else self.UCT
         if node.isLeaf():
             return node, node.isterminal()
         else:
+            evaluator = self.PUCT if self.type == 'NN' else self.UCT
             current = node
             while not current.isLeaf():
                 values = np.asarray([evaluator(node, c_uct) for node in current.children])
@@ -81,7 +81,7 @@ class MCTS:
             proba_children = P.detach().cpu().numpy()[0]
             NN_q_value = reward.detach().cpu().numpy()[0][0]
 
-            if self.use_dirichlet and leaf.parent is None:
+            if self.use_dirichlet and False:
                 probs = np.copy(proba_children)
                 alpha = config.alpha_dir
                 epsilon = config.epsilon_dir

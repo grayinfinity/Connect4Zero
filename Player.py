@@ -23,6 +23,7 @@ class Player:
             if len(self.current_node.children) == 0:
                 self.tree.expand_all(self.current_node)
             self.current_node = next((node for node in self.current_node.children if node.state == state), None)
+        self.current_node.parent = None
 
     def get_move(self, state, turn):
         self.update_current_node(state)
@@ -37,14 +38,13 @@ class Player:
 
         visit_probability = visits / np.sum(visits)
 
+        turn_data = []
         if self.selfplay:
             child_col = np.asarray([self.game.convert_move_to_col_index(move) for move in childmoves], dtype=int)
             unmask_pi = np.zeros(config.L)
             unmask_pi[child_col] = visit_probability  # set all impossible moves to 0
             flatten_state = self.game.state_flattener(self.current_node.state)
             turn_data = np.hstack((flatten_state, unmask_pi, 0))
-        else:
-            turn_data = []
 
         if self.selfplay and turn < config.tau_zero_self_play:
             self.current_node = np.random.choice(self.current_node.children, p=visit_probability)

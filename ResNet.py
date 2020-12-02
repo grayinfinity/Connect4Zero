@@ -187,21 +187,15 @@ class ResNet_Training:
         self.n_epochs = n_epoch
         self.learning_rate = learning_rate
         self.num_worker = num_worker
-        #  torch.set_num_threads(1)
+        torch.set_num_threads(1)
 
         if config.use_cuda:
             self.net = self.net.cuda()
 
         self.train_set = train_set
-        # self.test_set = test_set
 
-        self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True
-                                                        , num_workers=self.num_worker, drop_last=True)
-
-        # self.test_loader = torch.utils.data.DataLoader(self.test_set, batch_size=64, shuffle=True
-        #                                              , num_workers=self.num_worker)
-        self.valid_loader = torch.utils.data.DataLoader(self.train_set, batch_size=128, shuffle=True
-                                                        , num_workers=self.num_worker)
+        self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True,
+                                                        num_workers=self.num_worker, drop_last=True)
         self.net.train()
 
     # -----------------------------------------------------------------#
@@ -248,7 +242,6 @@ class ResNet_Training:
             total_train_loss = 0
 
             for i, data in enumerate(self.train_loader, 0):
-
                 sboard = config.L * config.H
                 preinputs = data[:, 0:3 * sboard]
                 inputs = preinputs.view(self.batch_size, 3, config.H, config.L)
