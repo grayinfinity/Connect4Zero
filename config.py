@@ -66,8 +66,8 @@ MINBATCHNUMBER = 64
 # ----------------------------------------------------------------------#
 # self play options
 dirichlet_for_self_play = True
-alpha_dir = 0.8
-epsilon_dir = 0.2
+alpha_dir = 1
+epsilon_dir = 0.75
 selfplaygames = 400  # i'd recommend at least 64
 
 # see main functions :

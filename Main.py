@@ -11,6 +11,7 @@ import torch
 import ray
 import copy
 from tqdm import tqdm
+import json
 
 ray.init(num_gpus=4)
 
@@ -23,16 +24,11 @@ def main():
     elos = []
     data = []
 
-    for i in range(100):
-        new_data = self_play(False, 800)
-
-        if len(data) == 0:
-            data = new_data
-        else:
-            data = np.vstack((data, new_data))
+    for i in range(1000):
+        new_data = self_play(best_nn, nn_budget + improved)
 
         previous_best = copy.deepcopy(best_nn)
-        improve_model_resnet(best_nn, data, improved)
+        improve_model_resnet(best_nn, new_data, improved)
 
         print('Compering the new NN vs the old one')
         winrate = test_player(best_nn, nn_budget, previous_best, nn_budget, 10)
@@ -40,19 +36,17 @@ def main():
         if winrate < 0.52:
             best_nn = previous_best
         else:
-            if len(data) == 0:
-                data = new_data
-            else:
-                data = np.vstack((data, new_data))
             improved += 1
             elos.append(check_elo(best_nn, nn_budget))
+            torch.save(best_nn.state_dict(), './best_model_densenet.pth')
+            with open('elos.txt', 'w') as filehandle:
+                json.dump(elos, filehandle)
 
     print(elos)
 
 
 def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_player_budget, loops):
-    games_count = config.CPUS * loops
-
+    games_count = 0
     main_player_wins = 0
     main_player_nn_id = ray.put(main_player_nn)
     compare_player_nn_id = ray.put(compare_player_nn)
@@ -61,17 +55,19 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
         for _ in range(config.CPUS):
             if i < loops // 2:  # check if making a copy is enough
                 result_ids.append(
-                    [play_game_with_gpu.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
-                                               compare_player_budget, False), 1])
+                    [play_game.remote(main_player_nn_id, main_player_budget, compare_player_nn_id,
+                                      compare_player_budget, False), 1])
             else:
                 result_ids.append(
-                    [play_game_with_gpu.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
-                                               main_player_budget, False), -1])
+                    [play_game.remote(compare_player_nn_id, compare_player_budget, main_player_nn_id,
+                                      main_player_budget, False), -1])
 
         for result_id, player_number in result_ids:
             winner, data = ray.get(result_id)
             if winner == player_number:
                 main_player_wins += 1
+            if winner != 0:
+                games_count += 1
 
     del main_player_nn_id
     del compare_player_nn_id
@@ -109,7 +105,7 @@ def self_play(nn, budget):
     for _ in tqdm(range(30)):
         result_ids = []
         for i in range(cpus):
-            result_ids.append(play_game_no_gpu.remote(nn_id, budget, nn_id, budget, True))
+            result_ids.append(play_game.remote(nn_id, budget, nn_id, budget, True))
 
         for result_id in result_ids:
             winner, data = ray.get(result_id)
@@ -133,6 +129,7 @@ def play_game_no_gpu(player_one_nn, player_one_budget, player_two_nn, player_two
     return play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay)
 
 
+@ray.remote(num_gpus=0.2)
 def play_game(player_one_nn, player_one_budget, player_two_nn, player_two_budget, is_selfplay):
     player_one = Player(player_one_nn, player_one_budget, is_selfplay)
     player_two = Player(player_two_nn, player_two_budget, is_selfplay)

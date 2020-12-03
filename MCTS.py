@@ -81,7 +81,7 @@ class MCTS:
             proba_children = P.detach().cpu().numpy()[0]
             NN_q_value = reward.detach().cpu().numpy()[0][0]
 
-            if self.use_dirichlet and False:
+            if self.use_dirichlet and leaf.parent is None:
                 probs = np.copy(proba_children)
                 alpha = config.alpha_dir
                 epsilon = config.epsilon_dir
@@ -135,7 +135,9 @@ class MCTS:
         leaf, isleafterminal = self.selection(node, cpuct)
         if not isleafterminal:
             self.expand_all(leaf)
-            leaf = np.random.choice(leaf.children)
+            if self.type != 'NN':
+                leaf = np.random.choice(leaf.children)
+
         if self.type == 'NN':
             self.eval_leaf(leaf)
         else:
