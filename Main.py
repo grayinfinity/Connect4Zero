@@ -17,11 +17,12 @@ ray.init(num_gpus=4)
 
 
 def main():
-    nn_budget = 30
+    nn_budget = 100
     improved = 0
-    best_nn = ResNet.resnet18()
+    best_nn = load_or_create_neural_net()
     best_nn.to(torch.device("cuda"))
     elos = []
+    last_elo = 30
     data = []
 
     for i in range(1000):
@@ -37,8 +38,9 @@ def main():
             best_nn = previous_best
         else:
             improved += 1
-            elos.append(check_elo(best_nn, nn_budget))
-            torch.save(best_nn.state_dict(), './best_model_densenet.pth')
+            #  last_elo = check_elo(best_nn, nn_budget, last_elo)
+            #  elos.append(last_elo)
+            torch.save(best_nn.state_dict(), './best_model_resnet.pth')
             with open('elos.txt', 'w') as filehandle:
                 json.dump(elos, filehandle)
 
@@ -77,10 +79,10 @@ def test_player(main_player_nn, main_player_budget, compare_player_nn, compare_p
     return winrate
 
 
-def check_elo(nn, budget):
-    mcts_budget = 30
+def check_elo(nn, budget, start_elo):
+    mcts_budget = start_elo
     print('Playing vs MCTS')
-    for _ in range(20):
+    for _ in range(10):
         winrate = test_player(nn, budget, False, mcts_budget, 2)
         if winrate > 0.5:
             mcts_budget += 10
@@ -252,6 +254,18 @@ def improve_model_resnet(nn, data, i):
         print('Not enough training data. Please increase number of self play games or use previous data = True')
         print('train set size', data.shape[0])
         raise ValueError
+
+
+def load_or_create_neural_net():
+    file_path = './best_model_resnet.pth'
+    best_player_so_far = ResNet.resnet18()
+    if os.path.exists(file_path):
+        print('loading already trained model')
+        best_player_so_far.load_state_dict(torch.load(file_path))
+
+    best_player_so_far.eval()
+
+    return best_player_so_far
 
 
 if __name__ == "__main__":
