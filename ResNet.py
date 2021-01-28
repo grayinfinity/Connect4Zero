@@ -1,7 +1,7 @@
 import torch
 import torch.utils
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 import torch.utils.data
@@ -18,10 +18,10 @@ import random
 
 # no bias in conv
 def conv3x3(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
+    return torch.nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
 
 
-class BasicBlock(nn.Module):
+class BasicBlock(torch.nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
@@ -29,13 +29,13 @@ class BasicBlock(nn.Module):
 
         m = OrderedDict()
         m['conv1'] = conv3x3(inplanes, planes, stride)
-        m['bn1'] = nn.BatchNorm2d(planes)
-        m['relu1'] = nn.ReLU(inplace=True)
+        m['bn1'] = torch.nn.BatchNorm2d(planes)
+        m['relu1'] = torch.nn.ReLU(inplace=True)
         m['conv2'] = conv3x3(planes, planes)
-        m['bn2'] = nn.BatchNorm2d(planes)
-        self.group1 = nn.Sequential(m)
+        m['bn2'] = torch.nn.BatchNorm2d(planes)
+        self.group1 = torch.nn.Sequential(m)
 
-        self.relu = nn.Sequential(nn.ReLU(inplace=True))
+        self.relu = torch.nn.Sequential(torch.nn.ReLU(inplace=True))
         self.downsample = downsample
 
     def forward(self, x):
@@ -52,13 +52,13 @@ class BasicBlock(nn.Module):
 
 # ================================= CLASS : ResNet + two heads ================================= #
 
-class ResNet(nn.Module):
+class ResNet(torch.nn.Module):
     def __init__(self, block, layers):
 
-        self.input_dim = config.L * config.H
-        self.output_dim = config.L
-        self.inplanes = config.convsize
-        self.convsize = config.convsize
+        self.input_dim = 7 * 6
+        self.output_dim = 7
+        self.inplanes = 128
+        self.convsize = 128
         super(ResNet, self).__init__()
 
         torch.set_num_threads(1)
@@ -67,62 +67,56 @@ class ResNet(nn.Module):
         self.ksize = (4, 4)
         self.padding = (1, 1)
         m = OrderedDict()
-        m['conv1'] = nn.Conv2d(3, self.convsize, kernel_size=self.ksize, stride=1, padding=self.padding, bias=False)
-        m['bn1'] = nn.BatchNorm2d(self.convsize)
-        m['relu1'] = nn.ReLU(inplace=True)
+        m['conv1'] = torch.nn.Conv2d(3, self.convsize, kernel_size=self.ksize, stride=1, padding=self.padding, bias=False)
+        m['bn1'] = torch.nn.BatchNorm2d(self.convsize)
+        m['relu1'] = torch.nn.ReLU(inplace=True)
 
-        self.group1 = nn.Sequential(m)
+        self.group1 = torch.nn.Sequential(m)
 
         # next : entering the resnet tower
         self.layer1 = self._make_layer(block, self.convsize, layers[0])
 
         # next : entering the policy head
-        pol_filters = config.polfilters
-        self.policy_entrance = nn.Conv2d(self.convsize, config.polfilters, kernel_size=1, stride=1, padding=0,
+        pol_filters = 2
+        self.policy_entrance = torch.nn.Conv2d(self.convsize, 2, kernel_size=1, stride=1, padding=0,
                                          bias=False)
-        self.bnpolicy = nn.BatchNorm2d(config.polfilters)
-        self.relu_pol = nn.ReLU(inplace=True)
+        self.bnpolicy = torch.nn.BatchNorm2d(2)
+        self.relu_pol = torch.nn.ReLU(inplace=True)
 
-        # if dense layer in policy head
-        if config.usehiddenpol:
-            self.hidden_dense_pol = nn.Linear(pol_filters * 30, config.hiddensize)
-            self.relu_hidden_pol = nn.ReLU(inplace=True)
-            self.fcpol1 = nn.Linear(config.hiddensize, 7)
-        else:
-            self.fcpol2 = nn.Linear(pol_filters * 30, 7)
+        self.fcpol2 = torch.nn.Linear(pol_filters * 30, 7)
 
-        self.softmaxpol = nn.Softmax(dim=1)
+        self.softmaxpol = torch.nn.Softmax(dim=1)
         # end of policy head
 
         # in parallel: entering the value head
-        val_filters = config.valfilters
-        self.value_entrance = nn.Conv2d(self.convsize, config.valfilters, kernel_size=1, stride=1, padding=0,
+        val_filters = 1
+        self.value_entrance = torch.nn.Conv2d(self.convsize, 1, kernel_size=1, stride=1, padding=0,
                                         bias=False)
-        self.bnvalue = nn.BatchNorm2d(config.valfilters)
-        self.relu_val = nn.ReLU(inplace=True)
+        self.bnvalue = torch.nn.BatchNorm2d(1)
+        self.relu_val = torch.nn.ReLU(inplace=True)
 
         # entering a dense hidden layer
-        self.hidden_dense_value = nn.Linear(val_filters * 30, config.hiddensize)
-        self.relu_hidden_val = nn.ReLU(inplace=True)
-        self.fcval = nn.Linear(config.hiddensize, 1)
-        self.qval = nn.Tanh()
+        self.hidden_dense_value = torch.nn.Linear(val_filters * 30, 256)
+        self.relu_hidden_val = torch.nn.ReLU(inplace=True)
+        self.fcval = torch.nn.Linear(256, 1)
+        self.qval = torch.nn.Tanh()
         # end value head
 
         # init weights
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, torch.nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / (5 * n)))
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, torch.nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
+            downsample = torch.nn.Sequential(
+                torch.nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
+                torch.nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
@@ -131,11 +125,11 @@ class ResNet(nn.Module):
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))
 
-        return nn.Sequential(*layers)
+        return torch.nn.Sequential(*layers)
 
     def forward(self, x):
         if type(x) == np.ndarray:
-            x = x.reshape((3, config.H, config.L))
+            x = x.reshape((3, 6, 7))
             x = torch.FloatTensor(x)
             x = torch.unsqueeze(x, 0)
 
@@ -146,21 +140,16 @@ class ResNet(nn.Module):
         x1 = self.policy_entrance(x)
         x1 = self.bnpolicy(x1)
         x1 = self.relu_pol(x1)
-        x1 = x1.view(-1, config.polfilters * 30)
+        x1 = x1.view(-1, 2 * 30)
 
-        if config.usehiddenpol:
-            x1 = self.hidden_dense_pol(x1)
-            x1 = self.relu_hidden_pol(x1)
-            x1 = self.fcpol1(x1)
-        else:
-            x1 = self.fcpol2(x1)
+        x1 = self.fcpol2(x1)
 
         x1 = self.softmaxpol(x1)
 
         x2 = self.value_entrance(x)
         x2 = self.bnvalue(x2)
         x2 = self.relu_val(x2)
-        x2 = x2.view(-1, 30 * config.valfilters)
+        x2 = x2.view(-1, 30 * 1)
         x2 = self.hidden_dense_value(x2)
         x2 = self.relu_hidden_val(x2)
         x2 = self.fcval(x2)
@@ -172,116 +161,10 @@ class ResNet(nn.Module):
 # -----------------------------------------------------------------#
 # builds the model
 def resnet18(pretrained=False, model_root=None, **kwargs):
-    model = ResNet(BasicBlock, [config.res_tower, 2, 2, 2], **kwargs)
+    model = ResNet(BasicBlock, [20, 2, 2, 2], **kwargs)
     model.eval()
     return model
 
 
 # ================================= CLASS : ResNet training ================================= #
 
-class ResNet_Training:
-    # -----------------------------------------------------------------#
-    def __init__(self, net, batch_size, n_epoch, learning_rate, train_set, test_set, num_worker):
-        self.net = net
-        self.batch_size = batch_size
-        self.n_epochs = n_epoch
-        self.learning_rate = learning_rate
-        self.num_worker = num_worker
-        torch.set_num_threads(1)
-
-        if config.use_cuda:
-            self.net = self.net.cuda()
-
-        self.train_set = train_set
-
-        self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True,
-                                                        num_workers=self.num_worker, drop_last=True)
-        self.net.train()
-
-    # -----------------------------------------------------------------#
-    # Losses
-    def Loss_value(self):
-        loss = torch.nn.MSELoss()
-        return loss
-
-    def Loss_policy_bce(self):
-        loss = torch.nn.BCELoss()
-        return loss
-
-    # -----------------------------------------------------------------#
-    # Optimizers
-    def Optimizer(self):
-
-        if config.optim == 'sgd':
-            optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate, momentum=config.momentum,
-                                  weight_decay=config.wdecay)
-        elif config.optim == 'adam':
-            optimizer = optim.Adam(self.net.parameters(), lr=self.learning_rate, weight_decay=config.wdecay)
-
-        elif config.optim == 'rms':
-            optimizer = optim.RMSprop(self.net.parameters(), lr=self.learning_rate, momentum=config.momentum,
-                                      weight_decay=config.wdecay)
-
-        return optimizer
-
-    # -----------------------------------------------------------------#
-    # training function
-
-    def trainNet(self):
-
-        n_batches = len(self.train_loader)
-        print(n_batches, 'batches')
-        optimizer = self.Optimizer()
-
-        # Loop for n_epochs
-        for epoch in range(self.n_epochs):
-
-            running_loss = 0.0
-            print_every = n_batches // 2
-            start_time = time.time()
-            total_train_loss = 0
-
-            for i, data in enumerate(self.train_loader, 0):
-                sboard = config.L * config.H
-                preinputs = data[:, 0:3 * sboard]
-                inputs = preinputs.view(self.batch_size, 3, config.H, config.L)
-                probas = data[:, 3 * sboard:3 * sboard + self.net.output_dim]
-
-                reward = data[:, -1]
-                probas = probas.float()
-                reward = reward.float()
-                reward = reward.view(self.batch_size, 1)
-
-                if config.use_cuda:
-                    inputs, probas, reward = inputs.cuda(), probas.cuda(), reward.cuda()
-
-                inputs = Variable(inputs.float())
-                probas, reward = Variable(probas), Variable(reward)
-
-                # Set the parameter gradients to zero
-                optimizer.zero_grad()
-
-                # Forward pass, backward pass, optimize
-                vh, ph = self.net(inputs)
-                loss = 0
-                loss += self.Loss_value()(vh, reward)
-                loss += self.Loss_policy_bce()(ph, probas)
-
-                loss.backward()
-                optimizer.step()
-
-                # Print statistics
-                running_loss += loss.data.item()
-                total_train_loss += loss.data.item()
-
-                if (i + 1) % (print_every + 1) == 0:
-                    print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
-                        epoch + 1, int(100 * (i + 1) / n_batches), running_loss / print_every,
-                        time.time() - start_time))
-
-                    #    #Reset running loss and time
-                    running_loss = 0.0
-                    start_time = time.time()
-
-        #  self.net.cpu()
-        self.net.eval()

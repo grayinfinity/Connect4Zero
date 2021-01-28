@@ -10,7 +10,7 @@ class Node:
         self.move = move  # is the move (an int) that was played from parent to get there
         self.parent = parent
         self.children = []
-        self.proba_children = np.zeros(config.L)
+        self.proba_children = np.zeros(7)
 
         self.N = 0  # vists
         self.W = 0  # cumulative reward
@@ -80,15 +80,6 @@ class MCTS:
             reward, P = self.neural_net.forward(flat)
             proba_children = P.detach().cpu().numpy()[0]
             NN_q_value = reward.detach().cpu().numpy()[0][0]
-
-            if self.use_dirichlet and leaf.parent is None:
-                probs = np.copy(proba_children)
-                alpha = config.alpha_dir
-                epsilon = config.epsilon_dir
-
-                dirichlet_input = [alpha for _ in range(config.L)]
-                dirichlet_list = np.random.dirichlet(dirichlet_input)
-                proba_children = (1 - epsilon) * probs + epsilon * dirichlet_list
 
             leaf.W -= NN_q_value
             leaf.N += 1
